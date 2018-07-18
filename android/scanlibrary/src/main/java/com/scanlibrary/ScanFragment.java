@@ -3,6 +3,7 @@ package com.scanlibrary;
 import android.app.Activity;
 import android.app.Fragment;
 import android.app.FragmentManager;
+import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.Matrix;
 import android.graphics.PointF;
@@ -11,6 +12,7 @@ import android.graphics.drawable.BitmapDrawable;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.transition.TransitionManager;
 import android.util.Log;
 import android.view.Gravity;
 import android.view.LayoutInflater;
@@ -31,7 +33,6 @@ import java.util.Map;
  */
 public class ScanFragment extends Fragment {
 
-    private Button scanButton;
     private ImageView sourceImageView;
     private FrameLayout sourceFrame;
     private PolygonView polygonView;
@@ -39,6 +40,18 @@ public class ScanFragment extends Fragment {
     private ProgressDialogFragment progressDialogFragment;
     private IScanner scanner;
     private Bitmap original;
+    private FrameLayout.LayoutParams layoutParams;
+    private Map<Integer, PointF> pointFs;
+    private ViewGroup transitionsContainer;
+    private ViewGroup confirmContainer;
+    private Button scanButton;
+    private Button cropButton;
+    private Button cancelButton;
+    private Button rotateButton;
+    private Button filtersButton;
+    private Button backToCamera;
+    private Button nextButton;
+    private boolean polygonVisible;
 
     @Override
     public void onAttach(Activity activity) {
@@ -56,14 +69,9 @@ public class ScanFragment extends Fragment {
         return view;
     }
 
-    public ScanFragment() {
-
-    }
-
     private void init() {
+        polygonVisible = false;
         sourceImageView = (ImageView) view.findViewById(R.id.sourceImageView);
-        scanButton = (Button) view.findViewById(R.id.scanButton);
-        scanButton.setOnClickListener(new ScanButtonClickListener());
         sourceFrame = (FrameLayout) view.findViewById(R.id.sourceFrame);
         polygonView = (PolygonView) view.findViewById(R.id.polygonView);
         sourceFrame.post(new Runnable() {
@@ -75,6 +83,168 @@ public class ScanFragment extends Fragment {
                 }
             }
         });
+        nextButton = (Button) view.findViewById(R.id.next);
+        backToCamera = (Button) view.findViewById(R.id.backToCamera);
+        confirmContainer = (ViewGroup) view.findViewById(R.id.confirmBar);
+        scanButton = (Button) confirmContainer.findViewById(R.id.scanButton);
+        cancelButton = (Button) confirmContainer.findViewById(R.id.cancelButton);
+
+        transitionsContainer = (ViewGroup) view.findViewById(R.id.editionBar);
+        cropButton = (Button) transitionsContainer.findViewById(R.id.cropButton);
+        rotateButton = (Button) transitionsContainer.findViewById(R.id.rotateButton);
+        filtersButton = (Button) transitionsContainer.findViewById(R.id.filtersButton);
+        filtersButton.setOnClickListener(new FiltersButtonClickListener());
+        scanButton.setOnClickListener(new ScanButtonClickListener());
+        cancelButton.setOnClickListener(new CancelButtonClickListener());
+        cropButton.setOnClickListener(new CropButtonClickListener());
+        rotateButton.setOnClickListener(new RotateButtonClickListener());
+        backToCamera.setOnClickListener(new BackToCameraClickListener());
+        nextButton.setOnClickListener(new NextButtonClickListener());
+    }
+
+    private class FiltersButtonClickListener implements View.OnClickListener {
+        @Override
+        public void onClick(final View v) {
+            showProgressDialog(getResources().getString(R.string.loading));
+            AsyncTask.execute(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        scanner.onScanFinish(Utils.getUri(getActivity(), original));
+                        dismissDialog();
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                }
+            });
+        }
+    }
+    private class NextButtonClickListener implements View.OnClickListener {
+        @Override
+        public void onClick(View v) {
+            showProgressDialog(getResources().getString(R.string.loading));
+            AsyncTask.execute(new Runnable() {
+                @Override
+                public void run() {
+                try {
+                    Log.i("XD", "MAMAMAMAHUUEVO");
+                    Intent data = new Intent();
+                    Bitmap bitmap = original;
+                    Uri uri = Utils.getUri(getActivity(), bitmap);
+                    data.putExtra(ScanConstants.SCANNED_RESULT, uri);
+                    Log.i("XD", "MAMAMAMAHUUEVO22");
+                    getActivity().setResult(Activity.RESULT_OK, data);
+                    original.recycle();
+                    System.gc();
+                    Log.i("XD", "MAMAMAMAHUUEVO3333");
+                    getActivity().runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            dismissDialog();
+                            getActivity().finish();
+                        }
+                    });
+                    Log.i("XD", "MAMAMAMAHUUEVO4444");
+                } catch (Exception e) {
+                    Log.i("XD", e.getMessage());
+                    e.printStackTrace();
+                }
+                }
+            });
+        }
+    }
+
+    private class CancelButtonClickListener implements View.OnClickListener {
+        @Override
+        public void onClick(final View v) {
+            toggleConfirmBar();
+        }
+    }
+
+    private class CropButtonClickListener implements View.OnClickListener {
+        @Override
+        public void onClick(final View v) {
+            toggleConfirmBar();
+        }
+    }
+
+    private class ScanButtonClickListener implements View.OnClickListener {
+        @Override
+        public void onClick(View v) {
+            crop();
+        }
+    }
+
+    private class RotateButtonClickListener implements View.OnClickListener {
+        @Override
+        public void onClick(View v) {
+            rotate();
+        }
+    }
+
+    private class BackToCameraClickListener implements View.OnClickListener  {
+        @Override
+        public void onClick(View v) {
+            getFragmentManager().popBackStack();
+        }
+    }
+
+    private void rotate() {
+        new RotateAsyncTask(this, original).execute();
+    }
+
+    private void crop() {
+        // Get image view dimensions
+        Map<String, Float> containerDimensions = new HashMap<>();
+        containerDimensions.put("width", (float) sourceImageView.getWidth());
+        containerDimensions.put("height", (float) sourceImageView.getHeight());
+
+        new CropAsyncTask(this, original, polygonView.getPoints(), containerDimensions)
+                .execute();
+    }
+
+    protected void setRotatedPhoto(Bitmap bitmap){
+        Uri uri = Utils.getUri(getActivity(), bitmap);
+        replaceCurrentImage(uri);
+    }
+
+    protected void setCroppedPhoto(Bitmap bitmap){
+        Uri uri = Utils.getUri(getActivity(), bitmap);
+        replaceCurrentImage(uri);
+        toggleConfirmBar();
+    }
+
+    private void replaceCurrentImage(final Uri uri) {
+        getActivity().runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                try{
+                    original = Utils.getBitmap(getActivity(), uri);
+                    getActivity().getContentResolver().delete(uri, null, null);
+                    sourceImageView.setImageBitmap(original);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        });
+    }
+
+    private void toggleConfirmBar() {
+        polygonVisible = !polygonVisible;
+        TransitionManager.beginDelayedTransition(confirmContainer);
+        confirmContainer.setVisibility(polygonVisible ? View.VISIBLE : View.GONE);
+        transitionsContainer.setVisibility(polygonVisible ? View.GONE : View.VISIBLE);
+        showPolygon(polygonVisible);
+    }
+
+    private void showPolygon(Boolean visible) {
+        if(visible){
+            polygonView.setPoints(pointFs);
+            polygonView.setVisibility(View.VISIBLE);
+            polygonView.setLayoutParams(layoutParams);
+        } else {
+            polygonView.setVisibility(View.GONE);
+        }
     }
 
     private Bitmap getBitmap() {
@@ -90,21 +260,21 @@ public class ScanFragment extends Fragment {
     }
 
     private Uri getUri() {
-        Uri uri = getArguments().getParcelable(ScanConstants.SELECTED_BITMAP);
-        return uri;
+        if(getArguments().getBoolean(ScanConstants.AFTER_FILTER_APPLY)) {
+            return getArguments().getParcelable(ScanConstants.FILTER_RESULT);
+        } else {
+            return getArguments().getParcelable(ScanConstants.SELECTED_BITMAP);
+        }
     }
 
     private void setBitmap(Bitmap original) {
         Bitmap scaledBitmap = scaledBitmap(original, sourceFrame.getWidth(), sourceFrame.getHeight());
         sourceImageView.setImageBitmap(scaledBitmap);
         Bitmap tempBitmap = ((BitmapDrawable) sourceImageView.getDrawable()).getBitmap();
-        Map<Integer, PointF> pointFs = getEdgePoints(tempBitmap);
-        polygonView.setPoints(pointFs);
-        polygonView.setVisibility(View.VISIBLE);
+        pointFs = getEdgePoints(tempBitmap);
         int padding = (int) getResources().getDimension(R.dimen.scanPadding);
-        FrameLayout.LayoutParams layoutParams = new FrameLayout.LayoutParams(tempBitmap.getWidth() + 2 * padding, tempBitmap.getHeight() + 2 * padding);
+        layoutParams = new FrameLayout.LayoutParams(tempBitmap.getWidth() + 2 * padding, tempBitmap.getHeight() + 2 * padding);
         layoutParams.gravity = Gravity.CENTER;
-        polygonView.setLayoutParams(layoutParams);
     }
 
     private Map<Integer, PointF> getEdgePoints(Bitmap tempBitmap) {
@@ -150,87 +320,22 @@ public class ScanFragment extends Fragment {
         return orderedPoints;
     }
 
-    private class ScanButtonClickListener implements View.OnClickListener {
-        @Override
-        public void onClick(View v) {
-            Map<Integer, PointF> points = polygonView.getPoints();
-            if (isScanPointsValid(points)) {
-                new ScanAsyncTask(points).execute();
-            } else {
-                showErrorDialog();
-            }
-        }
-    }
-
-    private void showErrorDialog() {
-        SingleButtonDialogFragment fragment = new SingleButtonDialogFragment(R.string.ok, getString(R.string.cantCrop), "Error", true);
-        FragmentManager fm = getActivity().getFragmentManager();
-        fragment.show(fm, SingleButtonDialogFragment.class.toString());
-    }
-
-    private boolean isScanPointsValid(Map<Integer, PointF> points) {
-        return points.size() == 4;
-    }
-
     private Bitmap scaledBitmap(Bitmap bitmap, int width, int height) {
         Matrix m = new Matrix();
         m.setRectToRect(new RectF(0, 0, bitmap.getWidth(), bitmap.getHeight()), new RectF(0, 0, width, height), Matrix.ScaleToFit.CENTER);
         return Bitmap.createBitmap(bitmap, 0, 0, bitmap.getWidth(), bitmap.getHeight(), m, true);
     }
 
-    private Bitmap getScannedBitmap(Bitmap original, Map<Integer, PointF> points) {
-        int width = original.getWidth();
-        int height = original.getHeight();
-        float xRatio = (float) original.getWidth() / sourceImageView.getWidth();
-        float yRatio = (float) original.getHeight() / sourceImageView.getHeight();
-
-        float x1 = (points.get(0).x) * xRatio;
-        float x2 = (points.get(1).x) * xRatio;
-        float x3 = (points.get(2).x) * xRatio;
-        float x4 = (points.get(3).x) * xRatio;
-        float y1 = (points.get(0).y) * yRatio;
-        float y2 = (points.get(1).y) * yRatio;
-        float y3 = (points.get(2).y) * yRatio;
-        float y4 = (points.get(3).y) * yRatio;
-        Log.d("", "POints(" + x1 + "," + y1 + ")(" + x2 + "," + y2 + ")(" + x3 + "," + y3 + ")(" + x4 + "," + y4 + ")");
-        Bitmap _bitmap = ((ScanActivity) getActivity()).getScannedBitmap(original, x1, y1, x2, y2, x3, y3, x4, y4);
-        return _bitmap;
-    }
-
-    private class ScanAsyncTask extends AsyncTask<Void, Void, Bitmap> {
-
-        private Map<Integer, PointF> points;
-
-        public ScanAsyncTask(Map<Integer, PointF> points) {
-            this.points = points;
-        }
-
-        @Override
-        protected void onPreExecute() {
-            super.onPreExecute();
-            showProgressDialog(getString(R.string.scanning));
-        }
-
-        @Override
-        protected Bitmap doInBackground(Void... params) {
-            Bitmap bitmap =  getScannedBitmap(original, points);
-            Uri uri = Utils.getUri(getActivity(), bitmap);
-            scanner.onScanFinish(uri);
-            return bitmap;
-        }
-
-        @Override
-        protected void onPostExecute(Bitmap bitmap) {
-            super.onPostExecute(bitmap);
-            bitmap.recycle();
-            dismissDialog();
-        }
-    }
-
     protected void showProgressDialog(String message) {
         progressDialogFragment = new ProgressDialogFragment(message);
         FragmentManager fm = getFragmentManager();
         progressDialogFragment.show(fm, ProgressDialogFragment.class.toString());
+    }
+
+    protected void showErrorDialog() {
+        SingleButtonDialogFragment fragment = new SingleButtonDialogFragment(R.string.ok, getString(R.string.cantCrop), "Error", true);
+        FragmentManager fm = getActivity().getFragmentManager();
+        fragment.show(fm, SingleButtonDialogFragment.class.toString());
     }
 
     protected void dismissDialog() {

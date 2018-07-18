@@ -1,7 +1,6 @@
-
 # React Native Android Scanner
 
-react native implementaion of [AndroidScannerDemo](https://github.com/jhansireddy/AndroidScannerDemo) 
+react native implementaion of [AndroidScannerDemo](https://github.com/jhansireddy/AndroidScannerDemo)
 
 ## Screenshots
 
@@ -19,13 +18,11 @@ react native implementaion of [AndroidScannerDemo](https://github.com/jhansiredd
 
 ## Getting started
 
-
-
 ### Installation
 
-`$ npm install git+https://git@github.com/aseemnishad/react-native-android-scanner.git  --save`
+`$ npm install git+https://git@github.com/zendostrike/react-native-android-scanner.git --save`
 
-* In `android/setting.gradle`
+- In `android/setting.gradle`
 
 ```gradle
 ...
@@ -36,8 +33,7 @@ include ':scanlibrary'
 project(':scanlibrary').projectDir = new File(rootProject.projectDir, '../node_modules/react-native-android-scanner/android/scanlibrary')
 ```
 
-
-* In android/app/build.gradle
+- In android/app/build.gradle
 
 ```
 ...
@@ -48,23 +44,21 @@ dependencies {
 }
 ```
 
-* Add the required permissions in `AndroidManifest.xml`:
-    
-    ```xml
-    <uses-permission android:name="android.permission.CAMERA" />
-    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
-    ...
-   
-   <application
-      android:allowBackup="true"
-    ```
+- Add the required permissions in `AndroidManifest.xml`:
+  ```xml
+  <uses-permission android:name="android.permission.CAMERA" />
+  <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
+  ...
+
+  <application
+    android:allowBackup="true"
+  ```
 
 #### Add to an Activity
 
-  Open your activity, usually located in `android/app/src/main/java/[your package]/MainApplication.java`.
-  Add `import com.reactlibrary.RNReactNativeAndroidScannerPackage;` to the imports at the top of the file.
-  Add `new RNReactNativeAndroidScannerPackage()` to the list returned by the `getPackages()` method.
-
+Open your activity, usually located in `android/app/src/main/java/[your package]/MainApplication.java`.
+Add `import com.reactlibrary.RNReactNativeAndroidScannerPackage;` to the imports at the top of the file.
+Add `new RNReactNativeAndroidScannerPackage()` to the list returned by the `getPackages()` method.
 
 ## Usage
 
@@ -95,12 +89,12 @@ export default class App extends Component {
   }
 
   onScan = (preference = 2) => {
-    
+
     // PICKFILE_REQUEST_CODE = 1
     // START_CAMERA_REQUEST_CODE = 2
     // OPEN_CAMERA = 4;
     // OPEN_MEDIA = 5;
-    
+
     RNAndroidScanner.startScan(preference);
   }
 
@@ -170,5 +164,5 @@ const styles = StyleSheet.create({
 ```
 
 ## Credits
+
 This repo is a React Native implementation of the following native library : [AndroidScannerDemo](https://github.com/jhansireddy/AndroidScannerDemo)
-  

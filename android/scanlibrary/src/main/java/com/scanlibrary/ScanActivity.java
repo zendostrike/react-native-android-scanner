@@ -4,14 +4,24 @@ import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.FragmentTransaction;
 import android.content.ComponentCallbacks2;
+import android.content.Intent;
 import android.graphics.Bitmap;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
+import android.provider.MediaStore;
+import android.util.Log;
+
+import java.io.File;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 
 /**
  * Created by jhansi on 28/03/15.
  */
 public class ScanActivity extends Activity implements IScanner, ComponentCallbacks2 {
+
+    private Uri fileUri;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -23,16 +33,12 @@ public class ScanActivity extends Activity implements IScanner, ComponentCallbac
     private void init() {
         PickImageFragment fragment = new PickImageFragment();
         Bundle bundle = new Bundle();
-        bundle.putInt(ScanConstants.OPEN_INTENT_PREFERENCE, getPreferenceContent());
+        bundle.putInt(ScanConstants.OPEN_INTENT_PREFERENCE, ScanConstants.OPEN_CAMERA);
         fragment.setArguments(bundle);
         android.app.FragmentManager fragmentManager = getFragmentManager();
         FragmentTransaction fragmentTransaction = fragmentManager.beginTransaction();
         fragmentTransaction.add(R.id.content, fragment);
         fragmentTransaction.commit();
-    }
-
-    protected int getPreferenceContent() {
-        return getIntent().getIntExtra(ScanConstants.OPEN_INTENT_PREFERENCE, 0);
     }
 
     @Override
@@ -58,6 +64,20 @@ public class ScanActivity extends Activity implements IScanner, ComponentCallbac
         FragmentTransaction fragmentTransaction = fragmentManager.beginTransaction();
         fragmentTransaction.add(R.id.content, fragment);
         fragmentTransaction.addToBackStack(ResultFragment.class.toString());
+        fragmentTransaction.commit();
+    }
+
+    @Override
+    public void onFilterFinish(Uri uri) {
+        ScanFragment fragment = new ScanFragment();
+        Bundle bundle = new Bundle();
+        bundle.putParcelable(ScanConstants.FILTER_RESULT, uri);
+        bundle.putBoolean(ScanConstants.AFTER_FILTER_APPLY, true);
+        fragment.setArguments(bundle);
+        android.app.FragmentManager fragmentManager = getFragmentManager();
+        FragmentTransaction fragmentTransaction = fragmentManager.beginTransaction();
+        fragmentTransaction.add(R.id.content, fragment);
+        fragmentTransaction.addToBackStack(ScanFragment.class.toString());
         fragmentTransaction.commit();
     }
 
@@ -125,4 +145,5 @@ public class ScanActivity extends Activity implements IScanner, ComponentCallbac
         System.loadLibrary("opencv_java3");
         System.loadLibrary("Scanner");
     }
+
 }
