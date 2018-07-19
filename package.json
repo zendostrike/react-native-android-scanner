@@ -1,7 +1,6 @@
-
 {
   "name": "react-native-android-scanner",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "react native library for AndroidScannerDemo https://github.com/jhansireddy/AndroidScannerDemo",
   "main": "index.js",
   "scripts": {
