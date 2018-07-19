@@ -90,7 +90,6 @@ public class PickImageFragment extends Fragment {
         return preference;
     }
 
-
     private class CameraButtonClickListener implements View.OnClickListener {
         @Override
         public void onClick(View v) {
@@ -131,10 +130,9 @@ public class PickImageFragment extends Fragment {
 
     private File createImageFile() {
         clearTempImages();
-        String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new
-                Date());
-        File file = new File(ScanConstants.IMAGE_PATH, "IMG_" + timeStamp +
-                ".jpg");
+        String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
+        File file = new File(ScanConstants.IMAGE_PATH, "IMG_" + timeStamp + ".jpg");
+        file.setLastModified(System.currentTimeMillis() / 1000);
         fileUri = Uri.fromFile(file);
         return file;
     }
@@ -146,13 +144,13 @@ public class PickImageFragment extends Fragment {
         if (resultCode == Activity.RESULT_OK) {
             try {
                 switch (requestCode) {
-                    case ScanConstants.START_CAMERA_REQUEST_CODE:
-                        bitmap = getBitmap(fileUri);
-                        break;
+                case ScanConstants.START_CAMERA_REQUEST_CODE:
+                    bitmap = getBitmap(fileUri);
+                    break;
 
-                    case ScanConstants.PICKFILE_REQUEST_CODE:
-                        bitmap = getBitmap(data.getData());
-                        break;
+                case ScanConstants.PICKFILE_REQUEST_CODE:
+                    bitmap = getBitmap(data.getData());
+                    break;
                 }
             } catch (Exception e) {
                 e.printStackTrace();
@@ -175,11 +173,8 @@ public class PickImageFragment extends Fragment {
         BitmapFactory.Options options = new BitmapFactory.Options();
         options.inSampleSize = 3;
         AssetFileDescriptor fileDescriptor = null;
-        fileDescriptor =
-                getActivity().getContentResolver().openAssetFileDescriptor(selectedimg, "r");
-        Bitmap original
-                = BitmapFactory.decodeFileDescriptor(
-                fileDescriptor.getFileDescriptor(), null, options);
+        fileDescriptor = getActivity().getContentResolver().openAssetFileDescriptor(selectedimg, "r");
+        Bitmap original = BitmapFactory.decodeFileDescriptor(fileDescriptor.getFileDescriptor(), null, options);
         return original;
     }
 }
